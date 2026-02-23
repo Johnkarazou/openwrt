@@ -25,6 +25,27 @@
 #include <linux/input.h>
 #include <linux/interrupt.h>
 #include <linux/platform_device.h>
+
+/* devm_kmemdup_array compatibility wrapper for kernel 6.6 */
+#ifndef devm_kmemdup_array
+static inline void *devm_kmemdup_array(struct device *dev,
+				       const void *src,
+				       size_t n, size_t size,
+				       gfp_t flags)
+{
+	size_t total;
+	void *p;
+
+	if (check_mul_overflow(n, size, &total))
+		return NULL;
+
+	p = devm_kmalloc(dev, total, flags);
+	if (p)
+		memcpy(p, src, total);
+	return p;
+}
+#endif
+
 #include <linux/of_irq.h>
 #include <linux/gpio.h>
 #include <linux/gpio_keys.h>
