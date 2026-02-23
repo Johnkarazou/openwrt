@@ -1,108 +1,106 @@
 ![OpenWrt logo](include/logo.png)
 
-OpenWrt Project is a Linux operating system targeting embedded devices. Instead
-of trying to create a single, static firmware, OpenWrt provides a fully
-writable filesystem with package management. This frees you from the
-application selection and configuration provided by the vendor and allows you
-to customize the device through the use of packages to suit any application.
-For developers, OpenWrt is the framework to build an application without having
-to build a complete firmware around it; for users this means the ability for
-full customization, to use the device in ways never envisioned.
+# OpenWrt for OrangePi RV2
 
-Sunshine!
+This is an experimental fork that adds support for the OrangePi RV2 (RISC-V) board to OpenWrt 25.12. The main OpenWrt tree doesn't support this board yet, so this is my attempt to bring it up to date.
 
-## Download
+---
 
-Built firmware images are available for many architectures and come with a
-package selection to be used as WiFi home router. To quickly find a factory
-image usable to migrate from a vendor stock firmware to OpenWrt, try the
-*Firmware Selector*.
+## ⚠️ Big Fat Warning
 
-* [OpenWrt Firmware Selector](https://firmware-selector.openwrt.org/)
+**This is testing software. Flash at your own risk.**
 
-If your device is supported, please follow the **Info** link to see install
-instructions or consult the support resources listed below.
+I'm not responsible if you brick your board, corrupt your NVMe drive, or your device suddenly becomes a paperweight. If something breaks, you get to keep both pieces. Make sure you have a recovery plan before flashing.
 
-## 
+That said, it works for me. Your mileage may vary.
 
-An advanced user may require additional or specific package. (Toolchain, SDK, ...) For everything else than simple firmware download, try the wiki download page:
+---
 
-* [OpenWrt Wiki Download](https://openwrt.org/downloads)
+## What This Is
 
-## Development
+I ported OrangePi RV2 support from OpenWrt 24.10 over to OpenWrt 25.12. The main OpenWrt project uses kernel 6.12 now, but the vendor drivers for this board are deeply tied to kernel 6.6. Rather than fight with hundreds of rejected patches, I kept it on 6.6 where everything actually works.
 
-To build your own firmware you need a GNU/Linux, BSD or macOS system (case
-sensitive filesystem required). Cygwin is unsupported because of the lack of a
-case sensitive file system.
+### What Works
 
-### Requirements
+- **WiFi** - Broadcom bcmdhd driver
+- **Ethernet** - Both the built-in emac and the RTL8125 2.5GbE
+- **NVMe boot** - Booting from NVMe SSD works
+- **Display** - DRM/KMS graphics
+- **GPIO** - I2C, SPI, UART, device tree overlays
+- **Docker** - containerd and docker-compose included
 
-You need the following tools to compile OpenWrt, the package names vary between
-distributions. A complete list with distribution specific packages is found in
-the [Build System Setup](https://openwrt.org/docs/guide-developer/build-system/install-buildsystem)
-documentation.
+---
+
+## Building It Yourself
+
+If you want to compile this from source, here's the drill.
+
+### What You Need
+
+A Linux machine (or WSL with case-sensitive filesystem). These packages:
 
 ```
-binutils bzip2 diff find flex gawk gcc-6+ getopt grep install libc-dev libz-dev
-make4.1+ perl python3.7+ rsync subversion unzip which
+binutils bzip2 diff find flex gawk gcc-9+ getopt grep git install libc-dev
+libz-dev make4.1+ perl python3 rsync subversion unzip which
 ```
 
-### Quickstart
+### The Build Process
 
-1. Run `./scripts/feeds update -a` to obtain all the latest package definitions
-   defined in feeds.conf / feeds.conf.default
+```bash
+# 1. Grab all the package definitions
+./scripts/feeds update -a
 
-2. Run `./scripts/feeds install -a` to install symlinks for all obtained
-   packages into package/feeds/
+# 2. Install them as symlinks
+./scripts/feeds install -a
 
-3. Run `make menuconfig` to select your preferred configuration for the
-   toolchain, target system & firmware packages.
+# 3. (Optional) Tweak the config
+make menuconfig
+# Target System → Ky
+# Subtarget → riscv64
+# Target Profile → x1 boards (64 bit)
 
-4. Run `make` to build your firmware. This will download all sources, build the
-   cross-compile toolchain and then cross-compile the GNU/Linux kernel & all chosen
-   applications for your target system.
+# 4. Download all the source code
+make download
 
-### Related Repositories
+# 5. Build it (grab a coffee, this takes a while)
+make -j$(nproc)
+```
 
-The main repository uses multiple sub-repositories to manage packages of
-different categories. All packages are installed via the OpenWrt package
-manager called `opkg`. If you're looking to develop the web interface or port
-packages to OpenWrt, please find the fitting repository below.
+When it's done, you'll find the images in `bin/targets/ky/riscv64/`.
 
-* [LuCI Web Interface](https://github.com/openwrt/luci): Modern and modular
-  interface to control the device via a web browser.
+---
 
-* [OpenWrt Packages](https://github.com/openwrt/packages): Community repository
-  of ported packages.
+## Flashing
 
-* [OpenWrt Routing](https://github.com/openwrt/routing): Packages specifically
-  focused on (mesh) routing.
+Grab either `openwrt-ky-riscv64-x1_orangepi-rv2-ext4-sysupgrade.img.gz` or the squashfs version. 
 
-* [OpenWrt Video](https://github.com/openwrt/video): Packages specifically
-  focused on display servers and clients (Xorg and Wayland).
+Decompress and write to your NVMe drive or SDCARD:
 
-## Support Information
+```bash
+gunzip openwrt-ky-riscv64-x1_orangepi-rv2-ext4-sysupgrade.img.gz
+dd if=openwrt-ky-riscv64-x1_orangepi-rv2-ext4-sysupgrade.img of=/dev/your-nvme bs=4M status=progress
+```
 
-For a list of supported devices see the [OpenWrt Hardware Database](https://openwrt.org/supported_devices)
+---
 
-### Documentation
+## Issues?
 
-* [Quick Start Guide](https://openwrt.org/docs/guide-quick-start/start)
-* [User Guide](https://openwrt.org/docs/guide-user/start)
-* [Developer Documentation](https://openwrt.org/docs/guide-developer/start)
-* [Technical Reference](https://openwrt.org/docs/techref/start)
+This is a side project. Things might break. If you find bugs or have fixes, feel free to open an issue or submit a pull request. No promises on response time, but I'll do my best.
 
-### Support Community
+**Join the Telegram community:** https://t.me/OrangePiRV2
 
-* [Forum](https://forum.openwrt.org): For usage, projects, discussions and hardware advise.
-* [Support Chat](https://webchat.oftc.net/#openwrt): Channel `#openwrt` on **oftc.net**.
+---
 
-### Developer Community
+## Original OpenWrt Info
 
-* [Bug Reports](https://bugs.openwrt.org): Report bugs in OpenWrt
-* [Dev Mailing List](https://lists.openwrt.org/mailman/listinfo/openwrt-devel): Send patches
-* [Dev Chat](https://webchat.oftc.net/#openwrt-devel): Channel `#openwrt-devel` on **oftc.net**.
+OpenWrt Project is a Linux operating system for embedded devices. Instead of a static firmware, it gives you a fully writable filesystem with package management. You're not stuck with what the vendor gave you - customize it to fit your needs.
+
+### Links
+
+- [OpenWrt Website](https://openwrt.org)
+- [Forum](https://forum.openwrt.org)
+- [Documentation](https://openwrt.org/docs)
 
 ## License
 
-OpenWrt is licensed under GPL-2.0
+GPL-2.0
